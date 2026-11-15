@@ -45,15 +45,17 @@ namespace Demo
             StreamReader sr = new StreamReader(this.webBrowser.DocumentStream, Encoding.GetEncoding(encode));
             string html = sr.ReadToEnd();
 
-            //Html2Article.LimitCount = 100;
-            //Html2Article.Depth = 8;
-            // 设置是否使用正文追加模式
-            Html2Article.AppendMode = this.appendCheckBox.CheckState == CheckState.Checked;
-
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            // 将Html解析为Article结构化数据
-            Article article = Html2Article.GetArticle(html);
+            // 将Html解析为Article结构化数据（每个解析器实例拥有独立配置，避免并发批次间串配置）
+            Html2Article parser = new Html2Article
+            {
+                // 设置是否使用正文追加模式
+                AppendMode = this.appendCheckBox.CheckState == CheckState.Checked,
+                // 传入页面Url，带标签正文中的相对链接会被补全为绝对链接
+                BaseUrl = this.urlTextBox.Text
+            };
+            Article article = parser.Parse(html);
             sw.Stop();
             msgLabel.Text = "提取耗时：" + Environment.NewLine + sw.ElapsedMilliseconds + "毫秒";
 
@@ -61,7 +63,7 @@ namespace Demo
             this.titleTextBox.Text = article.Title;
             this.contentTextBox.Text = article.Content;
 
-            string articleHtml = UrlUtility.FixUrl(this.urlTextBox.Text, article.ContentWithTags);
+            string articleHtml = article.ContentWithTags;
             this.contentWebBrowser.DocumentText = articleHtml;
 
             ResetState();
